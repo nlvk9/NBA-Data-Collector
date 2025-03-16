@@ -85,11 +85,6 @@ def obtainData(desiredTeams,desiredYears):
             # to rename the columns (by adding the Opp_ set by the dictionary earlier)
             teamDataFrame = teamDataFrame.rename(columns=opponentStatsDictionary)
 
-            # away games have an @ (meaning 'at' another team's arena)
-            # so assign away games to 0 and home games to 1
-            # lambda creates a small function (where the program then assigns either 1 or 0)
-            # teamDataFrame['Home'] = teamDataFrame['Home'].apply(lambda x: 0 if x == '@' else 1)
-
             # now add the team and year information to the main dataframe (the one created earlier)
             mainDataFrame = pd.concat([mainDataFrame,teamDataFrame],ignore_index=True)
 
@@ -153,15 +148,6 @@ def graphData(desiredTeams,desiredYears):
 
             # replacing the stats with those that have Opp_ in front
             teamDataFrameGraph = teamDataFrameGraph.rename(columns=opponentStatsDictionaryGraph)
-
-            # probably not necessary
-            # teamDataFrameGraph['Home'] = teamDataFrameGraph['Home'].apply(lambda x: 0 if x == '@' else 1)
-
-            # add a column at the front titled Season, with each year the program will go over
-            # teamDataFrameGraph.insert(loc=0,column='Season',value=year)
-
-            # add a column beside Season, with the team
-            # teamDataFrameGraph.insert(loc=1,column='Team',value=team.upper())
 
             # turn the desired data (points scored by team) into numeric values
             # errors='coerce' turns non-numeric values into NaN (Not a Number) without causing an error
@@ -234,18 +220,7 @@ if __name__ == '__main__': # main code
 
         # once the data has been collected and shown to user
         # ask them if they want to see a graph of the stats of each team
-        graphChoice = input('Enter y to create a graph for stats (anything else for no): ')
+        graphChoice = input('Enter y to create graph of points (enter anything else for no): ')
 
-        if graphChoice == 'y':
-
-            '''
-            # to show the user the stats they can choose from
-            stats = ['PTS','AST','STL','BLK','FG%','3P%','FG','FGA',
-             'FT','FTA','FT%','ORB','DRB','TRB','TOV','PF']
-            print(f'Stats: {stats}')
-            print('Choose from the stats above')x
-            '''
-
-            # obtain their choice(s) and send it/them to the dataChoice function
-            # dataChoice = input('Split choices by comma: ').split(',')
+        if graphChoice == 'y': # meaning user wants to create a graph
             graphData(desiredTeams,desiredYears)
