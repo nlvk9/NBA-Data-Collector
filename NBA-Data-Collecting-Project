@@ -1,0 +1,229 @@
+'''
+Scrapyard Ottawa 2025 Project
+The purpose of this project is to collect data from Basketball Reference.
+It uses pandas, time, random and matplotlib to extract information and visualize it.
+Users enter the abbreviation(s) of desired team(s) and the desired year(s).
+The program then obtains information about each time in each season.
+It prints out a simplified version of the data in the terminal, and
+gives the user the option to get the data in a csv file (a spreadsheet)
+with all of the data. The program then asks the user if they want to see
+the stats of each team in a graph (using matplotlib).
+Neel Vinayak
+2025-03-15 (Y-M-D)
+'''
+
+# necessary libraries
+import pandas as pd # to read the tables from basketball reference
+import time, random # in case I need to stall the collection
+import matplotlib.pyplot as plt # to create visual graphs
+
+# function to check if teams are correct and years are correct
+def teamAndYearClean(desiredTeams,desiredYears,yearsList,teamsList):
+
+    # check each year
+    for year in desiredYears:
+        if year not in yearsList:
+            desiredYears.remove(year) # clean out all the years not between 2015-2025
+    for team in desiredTeams:
+        if team not in teamsList:
+            desiredTeams.remove(team) # clean out all teams not in the list of 30
+
+    # return the cleaned teams and years lists
+    return desiredTeams,desiredYears
+
+# this will extract the data from basketball reference
+def obtainData(desiredTeams,desiredYears):
+
+    # this will help label the columns with either team (tm) or opponent (opp)
+    # for each stat
+    stats = ['PTS','AST','STL','BLK','FG%','3P%','FG','FGA',
+             'FT','FTA','FT%','ORB','DRB','TRB','TOV','PF']
+    
+    # create a a dictonary to store the stats for the team
+    # for each stat add Tm_ in front
+    teamStatsDictionary = {stat: 'Tm_' + str(stat) for stat in stats}
+
+    # dictonary to store opponent stats
+    # for each stat add Opp_ in front
+    opponentStatsDictionary = {stat + '.1': 'Opp_' + str(stat) for stat in stats}
+
+    mainDataFrame = pd.DataFrame() # create an empty dataframe w/ Pandas into which the program appends data
+
+    loopNum = 0 # this is just to show the number of urls the program has gone through 
+
+    for year in desiredYears: # iterate through all the years the user wants
+        
+        for team in desiredTeams: # in each year iterate through each team
+
+            # create the url from which the data will be collected
+            # basketball reference uses the team abbreviations and years in the url
+            url = f'https://basketball-reference.com/teams/{team}/{year}/gamelog/'
+            loopNum+=1
+            print(f'Url #{loopNum}: {url}') # to show the progress in the program
+
+            # inspect element shows the table's id as team_game_log_reg so set that in attributes
+            teamDataFrame = pd.read_html(url,header=1,attrs={'id':'team_game_log_reg'})[0] # use pandas to read the url 
+
+            # take out any rows where there is 'Rk'
+            teamDataFrame = teamDataFrame[(teamDataFrame['Rk'].str != '') & (teamDataFrame['Rk'].str.isnumeric())]
+
+            # there was a problem with 'Unnamed 24' so remove it
+            if 'Unnamed: 24' in teamDataFrame.columns:
+                teamDataFrame.drop(columns=['Unnamed: 24'])
+
+            # rename the columns (using the team and opponent dictionaries created earlier)
+            teamDataFrame = teamDataFrame.rename(columns={'Unnamed: 3': 'Home', 'Tm': 'Tm_Pts','Opp.1': 'Opp_Pts'})
+            teamDataFrame = teamDataFrame.rename(columns=teamStatsDictionary) # t add Tm_ to columns
+            teamDataFrame = teamDataFrame.rename(columns=opponentStatsDictionary) # to add Opp_ to columns
+
+            # to replace values in columns 'Home' and 'Opp' of teamDataFrame
+            teamDataFrame['Home'] = teamDataFrame['Home'].apply(lambda x: 0 if x == '@' else 1)
+
+            # now add the team and year information to the main dataframe (the one created earlier)
+            mainDataFrame = pd.concat([mainDataFrame,teamDataFrame],ignore_index=True)
+
+            time.sleep(6) # wait 6 seconds so as not to overload servers
+
+    # print out the simplified table of stats to the terminal
+    print(mainDataFrame)
+
+    # ask user if they want the csv file
+    print('Would you like to get the data in a csv file?')
+    csvChoice=input('n for no and anything else for yes: ')
+    #if yes
+    if csvChoice != 'n':
+        # creating the csv file and telling the user the name of it
+        csvName = input("Enter name for file: ") # get name the user wants
+        print(f'csv file has been stored in: {csvName}.csv')
+        # create the csv file and store it in the user's files
+        mainDataFrame.to_csv(f'{csvName}.csv',index=False)
+    return # return back to the main code
+
+# this will create the graph for the user
+def graphData(desiredTeams,desiredYears):
+        
+    # list of stats
+    stats = ['PTS','AST','STL','BLK','FG%','3P%','FG','FGA',
+             'FT','FTA','FT%','ORB','DRB','TRB','TOV','PF']    
+
+    # creating the team and opponent stat dictonaries
+    # also adding Tm_ or Opp_ in front
+    teamStatsDictionaryGraph = {stat: 'Tm_' + str(stat) for stat in stats}
+    opponentStatsDictionaryGraph = {stat + '.1': 'Opp_' + str(stat) for stat in stats}
+
+    loopNum = 0 # to show the url count
+
+    # iterate through each year and team
+    for year in desiredYears:
+        for team in desiredTeams:
+            loopNum+=1
+            # create the url and print it
+            url = f'https://www.basketball-reference.com/teams/{team}/{year}/gamelog/'
+            print(f'URL #{loopNum}: {url}')
+
+            # create the data frame from which the program will extract just the desired data
+            teamDataFrameGraph = pd.read_html(url,header=1,attrs={'id':'team_game_log_reg'})[0]
+            
+            teamDataFrameGraph = teamDataFrameGraph[(teamDataFrameGraph['Rk'].str != '') & (teamDataFrameGraph['Rk'].str.isnumeric())]
+
+            if 'Unnamed: 24' in teamDataFrameGraph.columns:
+                teamDataFrameGraph = teamDataFrameGraph.drop(columns=['Unnamed: 24'])
+                
+            teamDataFrameGraph = teamDataFrameGraph.rename(columns={'Unnamed: 3': 'Home', 'Tm': f'Tm_Pts', 'Opp.1': f'Opp_Pts'})
+            teamDataFrameGraph = teamDataFrameGraph.rename(columns=teamStatsDictionaryGraph)
+            teamDataFrameGraph = teamDataFrameGraph.rename(columns=opponentStatsDictionaryGraph)
+
+            teamDataFrameGraph['Home'] = teamDataFrameGraph['Home'].apply(lambda x: 0 if x == '@' else 1)
+
+            teamDataFrameGraph.insert(loc=0,column='Season',value=year)
+            teamDataFrameGraph.insert(loc=1,column='Team',value=team.upper())
+
+            # turn the desired data into numeric values
+            teamDataFrameGraph[f'Tm_Pts'] = pd.to_numeric(teamDataFrameGraph[f'Tm_Pts'],errors='coerce')
+            # print(teamDataFrameGraph[f'Tm_Pts']) # for debugging 
+
+            # now creating the x-axis of the graph which will store the game numbers
+            gameNumberList = []                                                                                
+                
+            # loop the length of the list of data 
+            for gameNumber in range(len(teamDataFrameGraph[f'Tm_Pts'])):
+                # creating game numbers
+                gameNumber+=1
+                # adding to the list of game numbers
+                gameNumberList.append(gameNumber)
+
+            '''
+            # this will show the average points scored throughout the entire season
+            scoreTotal=0
+            for score in teamDataFrameGraph['Tm_Pts']:
+                score=int(score)
+                scoreTotal+=score
+            scoreAverage = scoreTotal/(len(teamDataFrameGraph['Tm_Pts']))
+            print(f'{team} average points in {year} : {scoreAverage}')
+            '''
+
+            # now use the game number list on x-axis
+            # team stats on y-axis
+            plt.plot(gameNumberList,teamDataFrameGraph['Tm_Pts'])
+            # for each team and year show the title
+            # so they are easily distinguishable
+            plt.title(f'{team}, {year} Points Per Game')
+            plt.xlabel('Game Number')
+            plt.ylabel(f'Points')
+            plt.show() # to print the graph(s)
+
+            # time.sleep(2)
+
+if __name__ == '__main__': # main code
+
+    # list of all the teams in the NBA (from 2015-current)
+    # their abbreviations will be used in the urls from which data will be collected
+    teamsList = ['atl','bos','bkn','cha','chi','cle','dal','den','det','gsw','hou','ind','lac','lal','mem',
+                 'mia','mil','min','nop','nyk','orl','okc','phi','pho','por','sac','sas','tor','uta','was']
+    
+    # split into 3 to print on screen
+    teamsList1 = ['atl','bos','bkn','cha','chi','cle','dal','den','det','gsw']
+    teamsList2 = ['hou','ind','lac','lal','mem','mia','mil','min','nop','nyk']
+    teamsList3 = ['orl','okc','phi','pho','por','sac','sas','tor','uta','was']
+
+    # print teams
+    print(f'Teams: \n{teamsList1}\n{teamsList2}\n{teamsList3}')
+
+    # print years
+    yearsList = ['2015','2016','2017','2018','2019','2020','2021','2022','2023','2024','2025']
+    print(f'Years: {yearsList}')
+
+    # obtain the team(s) and year(s) the user wants
+    desiredTeams = input('Enter the team(s) you want with the abbreviation(s). Use all lowercase. Split by comma: ').split(',')
+    desiredYears = input('Enter the year(s) you want. Split by comma: ').split(',')
+
+    desiredTeams,desiredYears = teamAndYearClean(desiredTeams,desiredYears,yearsList,teamsList) # checking for incorrect teams & years
+    
+    if len(desiredTeams) == 0 or len(desiredYears) == 0: # if ALL years or teams are incorrect
+        print("Please only choose from the teams and years printed above.")
+        print(desiredTeams, desiredYears)
+
+    else: # meaning we can go forward
+        # tell user what they selected
+        print(f'Team(s) selected: {desiredTeams}. Year(s) selected: {desiredYears}')
+
+        # call on the obtainData function
+        obtainData(desiredTeams,desiredYears)
+
+        # once the data has been collected and shown to user
+        # ask them if they want to see a graph of the stats of each team
+        graphChoice = input('Enter y to create a graph for stats (anything else for no): ')
+
+        if graphChoice == 'y':
+
+            '''
+            # to show the user the stats they can choose from
+            stats = ['PTS','AST','STL','BLK','FG%','3P%','FG','FGA',
+             'FT','FTA','FT%','ORB','DRB','TRB','TOV','PF']
+            print(f'Stats: {stats}')
+            print('Choose from the stats above')x
+            '''
+
+            # obtain their choice(s) and send it/them to the dataChoice function
+            # dataChoice = input('Split choices by comma: ').split(',')
+            graphData(desiredTeams,desiredYears)
